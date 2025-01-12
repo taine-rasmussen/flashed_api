@@ -8,14 +8,12 @@ from dotenv import load_dotenv
 import os
 
 
-# Configuration for password hashing and JWT
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 load_dotenv()
 ALGORITHM = os.getenv("ALGORITHM")
 SECRET_KEY = os.getenv("SECRET_KEY")
 ACCESS_TOKEN_EXPIRE_MINUTES = os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES")
 
-# Helper Functions
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
 
