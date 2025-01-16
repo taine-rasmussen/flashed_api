@@ -95,15 +95,17 @@ def login(user: schemas.UserLogin, db: Session = Depends(get_db)):
 @app.post("/refresh-token/")
 def refresh_token(refresh_token: str, db: Session = Depends(get_db)):
     # Verify the refresh token
-    db_user = verify_refresh_token(refresh_token)
+    token_data = verify_refresh_token(refresh_token)
     
     # Issue new access token
     access_token_expires = timedelta(minutes=int(ACCESS_TOKEN_EXPIRE_MINUTES))
     new_access_token = create_access_token(
-        data={"sub": db_user, "id": db_user.id}, expires_delta=access_token_expires
+        data={"sub": token_data["email"], "id": token_data["id"]},
+        expires_delta=access_token_expires
     )
     
     return {"access_token": new_access_token}
+
 
 @app.get("/protected-route/")
 def protected_route(token: str = Depends(verify_access_token)):
