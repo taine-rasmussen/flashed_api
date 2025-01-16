@@ -43,9 +43,10 @@ def verify_access_token(token: str):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
-        if username is None:
+        user_id: int = payload.get("id")  
+        if username is None or user_id is None:
             raise HTTPException(status_code=401, detail="Invalid authentication token")
-        return username
+        return {"email": username, "id": user_id}
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid authentication token")
 
@@ -53,11 +54,13 @@ def verify_refresh_token(token: str):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
-        if username is None:
+        user_id: int = payload.get("id")  
+        if username is None or user_id is None:
             raise HTTPException(status_code=401, detail="Invalid refresh token")
-        return username
+        return {"email": username, "id": user_id}
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid refresh token")
+
 
 # Routes
 
@@ -76,15 +79,18 @@ def login(user: schemas.UserLogin, db: Session = Depends(get_db)):
     
     access_token_expires = timedelta(minutes=int(ACCESS_TOKEN_EXPIRE_MINUTES))
     access_token = create_access_token(
-        data={"sub": db_user.email}, expires_delta=access_token_expires
+        data={"sub": db_user.email, "id": db_user.id},
+        expires_delta=access_token_expires
     )
     
     refresh_token_expires = timedelta(minutes=int(REFRESH_TOKEN_EXPIRE_MINUTES))
     refresh_token = create_refresh_token(
-        data={"sub": db_user.email}, expires_delta=refresh_token_expires
+        data={"sub": db_user.email, "id": db_user.id},
+        expires_delta=refresh_token_expires
     )
     
     return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
+
 
 @app.post("/refresh-token/")
 def refresh_token(refresh_token: str, db: Session = Depends(get_db)):
@@ -94,7 +100,7 @@ def refresh_token(refresh_token: str, db: Session = Depends(get_db)):
     # Issue new access token
     access_token_expires = timedelta(minutes=int(ACCESS_TOKEN_EXPIRE_MINUTES))
     new_access_token = create_access_token(
-        data={"sub": db_user}, expires_delta=access_token_expires
+        data={"sub": db_user, "id": db_user.id}, expires_delta=access_token_expires
     )
     
     return {"access_token": new_access_token}
