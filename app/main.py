@@ -110,3 +110,12 @@ def refresh_token(refresh_token: str, db: Session = Depends(get_db)):
 @app.get("/protected-route/")
 def protected_route(token: str = Depends(verify_access_token)):
     return {"message": f"Hello, {token}"}
+
+@app.get("/get_user/")
+def get_user(id: str, db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.id == id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {"user": user}
+
+
