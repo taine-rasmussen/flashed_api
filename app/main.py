@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 import os
 from datetime import timedelta, datetime 
 from jose import jwt
+from .schemas import UserResponse
 
 app = FastAPI()
 
@@ -111,11 +112,11 @@ def refresh_token(refresh_token: str, db: Session = Depends(get_db)):
 def protected_route(token: str = Depends(verify_access_token)):
     return {"message": f"Hello, {token}"}
 
-@app.get("/get_user/")
+@app.get("/get_user/", response_model=UserResponse)
 def get_user(id: str, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.id == id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    return {"user": user}
+    return user
 
 
