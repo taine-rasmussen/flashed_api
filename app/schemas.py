@@ -7,6 +7,8 @@ class UserCreate(BaseModel):
     last_name: str
     email: EmailStr
     password: str
+    location: str | None = None
+    home_gym: str | None = None
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -18,6 +20,9 @@ class UserResponse(BaseModel):
     last_name: str
     email: EmailStr
     created_at: datetime
+    location: str | None = None
+    home_gym: str | None = None
+
 
     class Config:
         orm_mode = True
