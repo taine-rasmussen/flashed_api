@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Body
 from sqlalchemy.orm import Session
 from passlib.hash import bcrypt
 from . import models, schemas, crud
@@ -63,6 +63,7 @@ def verify_refresh_token(token: str):
         raise HTTPException(status_code=401, detail="Invalid refresh token")
 
 
+
 # Routes
 
 @app.post("/users/", response_model=schemas.UserResponse)
@@ -94,19 +95,34 @@ def login(user: schemas.UserLogin, db: Session = Depends(get_db)):
 
 
 @app.post("/refresh-token/")
-def refresh_token(refresh_token: str, db: Session = Depends(get_db)):
-    # Verify the refresh token
-    token_data = verify_refresh_token(refresh_token)
-    
-    # Issue new access token
-    access_token_expires = timedelta(minutes=int(ACCESS_TOKEN_EXPIRE_MINUTES))
-    new_access_token = create_access_token(
-        data={"sub": token_data["email"], "id": token_data["id"]},
-        expires_delta=access_token_expires
-    )
-    
-    return {"access_token": new_access_token}
+def refresh_token(refresh_token: str = Body(...), db: Session = Depends(get_db)):
+    if not refresh_token:
+        raise HTTPException(status_code=400, detail="Refresh token is required.")
 
+    try:
+        # Verify the refresh token
+        token_data = verify_refresh_token(refresh_token)
+
+        # Issue new tokens
+        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        new_access_token = create_access_token(
+            data={"sub": token_data["email"], "id": token_data["id"]},
+            expires_delta=access_token_expires,
+        )
+
+        # Rotate the refresh token
+        new_refresh_token = create_refresh_token(
+            data={"sub": token_data["email"], "id": token_data["id"]},
+            expires_delta=timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS),
+        )
+
+        return {
+            "access_token": new_access_token,
+            "refresh_token": new_refresh_token,
+        }
+
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid or expired refresh token.")
 
 @app.get("/protected-route/")
 def protected_route(token: str = Depends(verify_access_token)):
