@@ -37,7 +37,8 @@ def create_user(db: Session, user: schemas.UserCreate):
         email=user.email,
         password_hash=hashed_password,
         location=user.location,
-        home_gym=user.home_gym 
+        home_gym=user.home_gym,
+        grade_style=user.grade_style, 
     )
     db.add(db_user)
     db.commit()
