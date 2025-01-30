@@ -135,4 +135,14 @@ def get_user(id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
+@app.post("/update_user/", response_model=UserResponse)
+def update_user(
+    user_id: int = Body(...),
+    updates: dict = Body(...),
+    db: Session = Depends(get_db),
+):
+    updated_user = crud.update_user(db, user_id=user_id, updates=updates)
+    return updated_user
+
+
 

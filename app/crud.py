@@ -75,3 +75,28 @@ def authenticate_user(db: Session, email: str, password: str):
     if not user or not verify_password(password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid email or password")
     return user
+
+def update_user(db: Session, user_id: int, updates: dict):
+    # Fetch user by ID
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Check if the email is being updated and ensure it's unique
+    new_email = updates.get("email")
+    if new_email and new_email != user.email:
+        existing_user = get_user_by_email(db, new_email)
+        if existing_user:
+            raise HTTPException(status_code=400, detail="Email already in use")
+
+    # Update fields dynamically
+    for key, value in updates.items():
+        if hasattr(user, key):
+            setattr(user, key, value)
+
+    # Commit changes
+    db.commit()
+    db.refresh(user)
+
+    return user
