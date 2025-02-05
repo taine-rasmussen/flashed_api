@@ -100,3 +100,9 @@ def update_user(db: Session, user_id: int, updates: dict):
     db.refresh(user)
 
     return user
+
+
+def change_password(db: Session, curr_pwd: str, new_pwd: str):
+     # Verify password
+    if not verify_password(curr_pwd.password, user.password_hash):
+        raise HTTPException(status_code=400, detail="Invalid password")
