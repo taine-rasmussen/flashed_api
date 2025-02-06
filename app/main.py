@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends, Body
+from fastapi import FastAPI, HTTPException, Depends, Body, Security
 from sqlalchemy.orm import Session
 from passlib.hash import bcrypt
 from . import models, schemas, crud
@@ -8,6 +8,8 @@ import os
 from datetime import timedelta, datetime 
 from jose import jwt
 from .schemas import UserResponse
+from jose.exceptions import JWTError
+
 
 app = FastAPI()
 
@@ -144,5 +146,41 @@ def update_user(
     updated_user = crud.update_user(db, user_id=user_id, updates=updates)
     return updated_user
 
+@app.post("/change_password/", response_model=dict)
+def change_password(
+    current_password: str = Body(...),
+    new_password: str = Body(...),
+    token: dict = Security(verify_access_token),
+    db: Session = Depends(get_db)
+):
+    # Extract user ID from the token
+    user_id = token.get("id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid authentication token")
+
+    # Fetch the user from the database
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Check if the current password is correct
+    if not verify_password(current_password, user.password_hash):
+        raise HTTPException(
+            status_code=400, 
+            detail="Invalid current password", 
+            headers={"X-Error": "Current password is incorrect"}
+        )
+
+    # Prevent users from setting the same password
+    if verify_password(new_password, user.password_hash):
+        raise HTTPException(
+            status_code=400, 
+            detail="New password cannot be the same as the current password", 
+            headers={"X-Error": "New password is the same as the current password"}
+        )
+
+    crud.change_password(db, user, current_password, new_password)
+
+    return {"message": "Password updated successfully"}
 
 
