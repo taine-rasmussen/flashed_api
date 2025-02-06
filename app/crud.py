@@ -102,7 +102,18 @@ def update_user(db: Session, user_id: int, updates: dict):
     return user
 
 
-def change_password(db: Session, curr_pwd: str, new_pwd: str):
-     # Verify password
-    if not verify_password(curr_pwd.password, user.password_hash):
+def change_password(db: Session, user: models.User, curr_pwd: str, new_pwd: str):
+    # Verify current password
+    if not verify_password(curr_pwd, user.password_hash):
         raise HTTPException(status_code=400, detail="Invalid password")
+    
+    # Hash new password
+    hashed_new_pwd = hash_password(new_pwd)
+    
+    # Update password in database
+    user.password_hash = hashed_new_pwd
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    
+    return {"message": "Password updated successfully"}
