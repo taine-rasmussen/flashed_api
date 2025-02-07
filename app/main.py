@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends, Body, Security
+from fastapi import FastAPI, HTTPException, Depends, Body, Security, Request
 from sqlalchemy.orm import Session
 from passlib.hash import bcrypt
 from . import models, schemas, crud
@@ -148,39 +148,25 @@ def update_user(
 
 @app.post("/change_password/", response_model=dict)
 def change_password(
-    current_password: str = Body(...),
-    new_password: str = Body(...),
+    data: schemas.ChangePasswordSchema,
     token: dict = Security(verify_access_token),
     db: Session = Depends(get_db)
 ):
-    # Extract user ID from the token
+    print("Received data:", data)
     user_id = token.get("id")
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid authentication token")
 
-    # Fetch the user from the database
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # Check if the current password is correct
-    if not verify_password(current_password, user.password_hash):
-        raise HTTPException(
-            status_code=400, 
-            detail="Invalid current password", 
-            headers={"X-Error": "Current password is incorrect"}
-        )
+    if not verify_password(data.current_password, user.password_hash):
+        raise HTTPException(status_code=400, detail="Invalid current password")
 
-    # Prevent users from setting the same password
-    if verify_password(new_password, user.password_hash):
-        raise HTTPException(
-            status_code=400, 
-            detail="New password cannot be the same as the current password", 
-            headers={"X-Error": "New password is the same as the current password"}
-        )
+    if verify_password(data.new_password, user.password_hash):
+        raise HTTPException(status_code=400, detail="New password cannot be the same as the current password")
 
-    crud.change_password(db, user, current_password, new_password)
+    crud.change_password(db, user, data.current_password, data.new_password)
 
     return {"message": "Password updated successfully"}
-
-
