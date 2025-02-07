@@ -35,3 +35,7 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     email: EmailStr | None = None
+
+class ChangePasswordSchema(BaseModel):
+    current_password: str
+    new_password: str
