@@ -17,9 +17,10 @@ Base.metadata.create_all(bind=engine)
 
 ALGORITHM = os.getenv("ALGORITHM")
 SECRET_KEY = os.getenv("SECRET_KEY")
-ACCESS_TOKEN_EXPIRE_MINUTES = os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES")
-REFRESH_TOKEN_EXPIRE_MINUTES = os.getenv("REFRESH_TOKEN_EXPIRE_MINUTES")
-REFRESH_TOKEN_EXPIRE_MINUTES = os.getenv("REFRESH_TOKEN_EXPIRE_MINUTES")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 15))
+REFRESH_TOKEN_EXPIRE_MINUTES = int(os.getenv("REFRESH_TOKEN_EXPIRE_MINUTES", 10080))
+
+
 
 
 def create_access_token(data: dict, expires_delta: timedelta = None):
@@ -105,17 +106,17 @@ def refresh_token(refresh_token: str = Body(...), db: Session = Depends(get_db))
         # Verify the refresh token
         token_data = verify_refresh_token(refresh_token)
 
-        # Issue new tokens
-        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        # Issue new access token
+        expires_delta = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         new_access_token = create_access_token(
             data={"sub": token_data["email"], "id": token_data["id"]},
-            expires_delta=access_token_expires,
+            expires_delta=expires_delta,
         )
 
         # Rotate the refresh token
         new_refresh_token = create_refresh_token(
             data={"sub": token_data["email"], "id": token_data["id"]},
-            expires_delta=timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS),
+            expires_delta=timedelta(minutes=REFRESH_TOKEN_EXPIRE_MINUTES),
         )
 
         return {
@@ -125,6 +126,7 @@ def refresh_token(refresh_token: str = Body(...), db: Session = Depends(get_db))
 
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid or expired refresh token.")
+
 
 @app.get("/protected-route/")
 def protected_route(token: str = Depends(verify_access_token)):
