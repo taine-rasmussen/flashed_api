@@ -45,7 +45,6 @@ def create_refresh_token(data: dict, expires_delta: timedelta = None):
     return encoded_jwt
 
 def verify_access_token(token: str = Depends(oauth2_scheme)):
-    print("Received Token:", token)
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
@@ -156,8 +155,6 @@ def change_password(
     token: dict = Security(verify_access_token),
     db: Session = Depends(get_db)
 ):
-    print("Received Data:", data.dict())
-    print("Token Payload:", token)
 
     #Get the user from the db
     user_id = token.get("id")

@@ -101,8 +101,6 @@ def change_password(db: Session, user: models.User, curr_pwd: str, new_pwd: str)
     # Verify current password
     if not verify_password(curr_pwd, user.password_hash):
         raise HTTPException(status_code=400, detail="Invalid password")
-
-    print(curr_pwd, new_pwd, 'INSIDE CRUD')
     
     # Hash new password
     hashed_new_pwd = hash_password(new_pwd)
