@@ -9,6 +9,8 @@ from datetime import timedelta, datetime
 from jose import jwt
 from .schemas import UserResponse
 from jose.exceptions import JWTError
+from fastapi.security import OAuth2PasswordBearer
+from .utils import verify_password, hash_password
 
 
 app = FastAPI()
@@ -19,8 +21,7 @@ ALGORITHM = os.getenv("ALGORITHM")
 SECRET_KEY = os.getenv("SECRET_KEY")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 15))
 REFRESH_TOKEN_EXPIRE_MINUTES = int(os.getenv("REFRESH_TOKEN_EXPIRE_MINUTES", 10080))
-
-
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
 def create_access_token(data: dict, expires_delta: timedelta = None):
@@ -43,7 +44,7 @@ def create_refresh_token(data: dict, expires_delta: timedelta = None):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-def verify_access_token(token: str):
+def verify_access_token(token: str = Depends(oauth2_scheme)):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
@@ -154,21 +155,26 @@ def change_password(
     token: dict = Security(verify_access_token),
     db: Session = Depends(get_db)
 ):
-    print("Received data:", data)
-    user_id = token.get("id")
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Invalid authentication token")
 
+    #Get the user from the db
+    user_id = token.get("id")
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
+    # Verify the current password
     if not verify_password(data.current_password, user.password_hash):
         raise HTTPException(status_code=400, detail="Invalid current password")
 
+    # Check if the new password is the same as the current password
     if verify_password(data.new_password, user.password_hash):
         raise HTTPException(status_code=400, detail="New password cannot be the same as the current password")
 
-    crud.change_password(db, user, data.current_password, data.new_password)
+    # Hash the new password and update the user's password
+    hashed_new_password = hash_password(data.new_password)
+    user.password_hash = hashed_new_password
+    db.commit()
+    db.refresh(user)
+
 
     return {"message": "Password updated successfully"}
