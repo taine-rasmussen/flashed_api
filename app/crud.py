@@ -112,3 +112,18 @@ def change_password(db: Session, user: models.User, curr_pwd: str, new_pwd: str)
     db.refresh(user)
     
     return {"message": "Password updated successfully"}
+
+def create_climb(db: Session, climb: schemas.ClimbCreate, user_id: int):
+    db_climb = models.Climb(
+        user_id=user_id,
+        grade=climb.grade,
+        attempts=climb.attempts,
+        created_at=datetime.utcnow(),
+    )
+    db.add(db_climb)
+    db.commit()
+    db.refresh(db_climb)
+    return db_climb
+
+def get_user_climbs(db: Session, user_id: int):
+    return db.query(models.Climb).filter(models.Climb.user_id == user_id).order_by(models.Climb.created_at.desc()).all()

@@ -178,3 +178,28 @@ def change_password(
 
 
     return {"message": "Password updated successfully"}
+
+@app.post("/add_climb/", response_model=schemas.ClimbResponse)
+def add_climb(
+    climb: schemas.ClimbCreate,
+    user_id: int,
+    db: Session = Depends(get_db),
+    token: dict = Depends(verify_access_token)
+):
+    if token.get("id") != user_id:
+        raise HTTPException(status_code=403, detail="You are not authorized to add climbs for this user.")
+    
+    db_climb = crud.create_climb(db=db, climb=climb, user_id=user_id)
+    return db_climb
+
+@app.get("/get_climbs/", response_model=list[schemas.ClimbResponse])
+def get_climbs(
+    user_id: int,
+    db: Session = Depends(get_db),
+    token: dict = Depends(verify_access_token)
+):
+    if token.get("id") != user_id:
+        raise HTTPException(status_code=403, detail="You are not authorized to view climbs for this user.")
+    
+    climbs = crud.get_user_climbs(db=db, user_id=user_id)
+    return climbs

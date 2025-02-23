@@ -39,3 +39,17 @@ class TokenData(BaseModel):
 class ChangePasswordSchema(BaseModel):
     current_password: str
     new_password: str
+
+class ClimbBase(BaseModel):
+    grade: str
+    attempts: int
+
+class ClimbCreate(ClimbBase):
+    pass
+
+class ClimbResponse(ClimbBase):
+    id: int
+    created_at: datetime
+
+    class Config:
+        orm_mode = True
