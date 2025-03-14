@@ -11,6 +11,7 @@ from .schemas import UserResponse
 from jose.exceptions import JWTError
 from fastapi.security import OAuth2PasswordBearer
 from .utils import verify_password, hash_password
+from typing import List, Optional
 
 
 app = FastAPI()
@@ -192,14 +193,14 @@ def add_climb(
     db_climb = crud.create_climb(db=db, climb=climb, user_id=user_id)
     return db_climb
 
-@app.get("/get_climbs/", response_model=list[schemas.ClimbResponse])
+@app.post("/get_climbs/", response_model=List[schemas.ClimbResponse])
 def get_climbs(
     user_id: int,
+    filters: schemas.ClimbFilter,  # Expect filters in the request body
     db: Session = Depends(get_db),
     token: dict = Depends(verify_access_token)
 ):
     if token.get("id") != user_id:
         raise HTTPException(status_code=403, detail="You are not authorized to view climbs for this user.")
     
-    climbs = crud.get_user_climbs(db=db, user_id=user_id)
-    return climbs
+    return crud.get_user_climbs(db, user_id, filters)

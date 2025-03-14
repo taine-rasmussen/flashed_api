@@ -1,5 +1,6 @@
 from pydantic import BaseModel, EmailStr
 from datetime import datetime
+from typing import List, Optional
 
 
 class UserCreate(BaseModel):
@@ -51,5 +52,11 @@ class ClimbResponse(ClimbBase):
     id: int
     created_at: datetime
 
-    class Config:
-        orm_mode = True
+class Config:
+    orm_mode = True
+
+class ClimbFilter(BaseModel):
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    grade_range: Optional[List[str]] = None
+

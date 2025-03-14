@@ -125,5 +125,17 @@ def create_climb(db: Session, climb: schemas.ClimbCreate, user_id: int):
     db.refresh(db_climb)
     return db_climb
 
-def get_user_climbs(db: Session, user_id: int):
-    return db.query(models.Climb).filter(models.Climb.user_id == user_id).order_by(models.Climb.created_at.desc()).all()
+def get_user_climbs(db: Session, user_id: int, filters: schemas.ClimbFilter):
+    query = db.query(models.Climb).filter(models.Climb.user_id == user_id)
+    
+    # Filter by date range if provided
+    if filters.start_date:
+        query = query.filter(models.Climb.created_at >= filters.start_date)
+    if filters.end_date:
+        query = query.filter(models.Climb.created_at <= filters.end_date)
+    
+    # Filter by grade range if provided
+    if filters.grade_range:
+        query = query.filter(models.Climb.grade.in_(filters.grade_range))
+
+    return query.order_by(models.Climb.created_at.desc()).all()
