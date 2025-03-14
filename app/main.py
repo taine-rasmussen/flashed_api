@@ -196,7 +196,7 @@ def add_climb(
 @app.post("/get_climbs/", response_model=List[schemas.ClimbResponse])
 def get_climbs(
     user_id: int,
-    filters: schemas.ClimbFilter,  # Expect filters in the request body
+    filters: schemas.ClimbFilter,
     db: Session = Depends(get_db),
     token: dict = Depends(verify_access_token)
 ):
