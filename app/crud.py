@@ -139,3 +139,5 @@ def get_user_climbs(db: Session, user_id: int, filters: schemas.ClimbFilter):
         query = query.filter(models.Climb.grade.in_(filters.grade_range))
 
     return query.order_by(models.Climb.created_at.desc()).all()
+
+    

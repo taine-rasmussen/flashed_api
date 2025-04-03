@@ -60,3 +60,7 @@ class ClimbFilter(BaseModel):
     end_date: Optional[datetime] = None
     grade_range: Optional[List[str]] = None
 
+class AverageGradeRequest(BaseModel):
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+
