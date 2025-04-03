@@ -12,6 +12,7 @@ from jose.exceptions import JWTError
 from fastapi.security import OAuth2PasswordBearer
 from .utils import verify_password, hash_password
 from typing import List, Optional
+from sqlalchemy import func, case, cast, Integer
 
 
 app = FastAPI()
@@ -204,3 +205,31 @@ def get_climbs(
         raise HTTPException(status_code=403, detail="You are not authorized to view climbs for this user.")
     
     return crud.get_user_climbs(db, user_id, filters)
+
+@app.post("/average_grade/")
+def average_grade(
+    request: schemas.AverageGradeRequest,
+    db: Session = Depends(get_db),
+    token: dict = Depends(verify_access_token)
+):
+    user_id = token.get("id")
+    query = db.query(models.Climb).filter(models.Climb.user_id == user_id)
+    
+    if request.start_date:
+        query = query.filter(models.Climb.created_at >= request.start_date)
+    if request.end_date:
+        query = query.filter(models.Climb.created_at <= request.end_date)
+    
+    # Convert V-grade strings to numeric values by removing the 'V' and casting to Integer.
+    grade_numeric = case(
+        (models.Climb.grade.like('V%'), cast(func.substr(models.Climb.grade, 2), Integer)),
+        else_=None
+    )
+    
+    avg_grade = query.with_entities(func.avg(grade_numeric)).scalar()
+    
+    # Round the average to the nearest whole number, since V-grades are whole numbers.
+    rounded_grade = round(avg_grade) if avg_grade is not None else 0
+    
+    return {"average_grade": rounded_grade}
+
