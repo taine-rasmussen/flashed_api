@@ -220,7 +220,7 @@ def average_grade(
     if request.end_date:
         query = query.filter(models.Climb.created_at <= request.end_date)
     
-    # Convert V-grade strings to numeric values by removing the 'V' and casting to Integer.
+    # Convert V-grade strings to numeric values
     grade_numeric = case(
         (models.Climb.grade.like('V%'), cast(func.substr(models.Climb.grade, 2), Integer)),
         else_=None
@@ -228,8 +228,9 @@ def average_grade(
     
     avg_grade = query.with_entities(func.avg(grade_numeric)).scalar()
     
-    # Round the average to the nearest whole number, since V-grades are whole numbers.
+    # Round the average to the nearest whole number
     rounded_grade = round(avg_grade) if avg_grade is not None else 0
     
+    # todo: take in grade style, convert font scale grades - how to average 8a, 8b+, 8c etc
     return {"average_grade": rounded_grade}
 
