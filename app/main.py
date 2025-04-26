@@ -234,3 +234,17 @@ def average_grade(
     # todo: take in grade style, convert font scale grades - how to average 8a, 8b+, 8c etc
     return {"average_grade": rounded_grade}
 
+
+@app.get(
+    "/projects/",
+    response_model=List[schemas.ProjectResponse],
+)
+def read_projects(
+    db: Session = Depends(get_db),
+    token_data: dict = Depends(verify_access_token),
+):
+    user_id = token_data["id"]
+    projects = crud.get_user_projects(db, user_id)
+    if projects is None:
+        raise HTTPException(status_code=404, detail="No projects found")
+    return projects
