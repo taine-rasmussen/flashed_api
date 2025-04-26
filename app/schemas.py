@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Any
 
 
 class UserCreate(BaseModel):
@@ -63,4 +63,18 @@ class ClimbFilter(BaseModel):
 class AverageGradeRequest(BaseModel):
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
+
+class ProjectResponse(BaseModel):
+    id: int
+    user_id: int
+    is_active: bool
+    created_at: datetime
+    total_moves: int
+    total_moves_completed: int
+    notes: List[str]
+    moves: List[dict[str, Any]]  
+    sessions: List[dict[str, Any]]
+
+    class Config:
+        orm_mode = True
 

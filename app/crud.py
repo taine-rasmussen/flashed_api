@@ -140,4 +140,10 @@ def get_user_climbs(db: Session, user_id: int, filters: schemas.ClimbFilter):
 
     return query.order_by(models.Climb.created_at.desc()).all()
 
-    
+def get_user_projects(db: Session, user_id: int):
+    return (
+        db.query(models.Project)
+          .filter(models.Project.user_id == user_id)
+          .order_by(models.Project.created_at.desc())
+          .all()
+    )
