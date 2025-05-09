@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, Depends, Body, Security, Request
 from sqlalchemy.orm import Session
 from passlib.hash import bcrypt
-from . import models, schemas, crud
+from . import models, schemas, crud, dev_routes
 from .database import engine, Base, get_db
 from dotenv import load_dotenv
 import os
@@ -25,6 +25,9 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 15))
 REFRESH_TOKEN_EXPIRE_MINUTES = int(os.getenv("REFRESH_TOKEN_EXPIRE_MINUTES", 10080))
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
+
+if os.getenv("ENV") != "production":
+    app.include_router(dev_routes.router)
 
 def create_access_token(data: dict, expires_delta: timedelta = None):
     to_encode = data.copy()
