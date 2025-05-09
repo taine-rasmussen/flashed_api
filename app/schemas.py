@@ -6,11 +6,16 @@ from typing import List, Optional, Any
 class UserCreate(BaseModel):
     first_name: str
     last_name: str
+    username: Optional[str] = None
     email: EmailStr
     password: str
     location: str
-    home_gym: str | None = None
+    home_gym: Optional[str] = None
     grade_style: str
+    profile_image_url: Optional[str] = None
+    auth_provider: str = "email"
+    notifications_enabled: bool = True
+
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -20,13 +25,16 @@ class UserResponse(BaseModel):
     id: int
     first_name: str
     last_name: str
+    username: Optional[str]
     email: EmailStr
+    profile_image_url: Optional[str]
     created_at: datetime
     location: str
-    home_gym: str | None = None
+    home_gym: Optional[str]
     grade_style: str
-
-
+    onboarding_complete: bool
+    auth_provider: str
+    notifications_enabled: bool
     class Config:
         orm_mode = True
 

@@ -10,18 +10,24 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     first_name = Column(String(50), nullable=False)
     last_name = Column(String(50), nullable=False)
+    username = Column(String(50), unique=True, nullable=True)
     email = Column(String(100), unique=True, nullable=False)
     password_hash = Column(Text, nullable=False)
+    profile_image_url = Column(String(200), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     location = Column(String(50), nullable=False)
     home_gym = Column(String(50), nullable=True)
     grade_style = Column(String(50), nullable=False)
+    onboarding_complete = Column(Boolean, default=False, nullable=False)
+    auth_provider = Column(String(20), default='email', nullable=False)
+    notifications_enabled = Column(Boolean, default=True, nullable=False)
     climbs = relationship("Climb", back_populates="user")
     projects = relationship(
         "Project",
         back_populates="user",
         cascade="all, delete-orphan",
     )
+
 
 class Climb(Base):
     __tablename__ = "climbs"
