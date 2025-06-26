@@ -35,6 +35,7 @@ class UserResponse(BaseModel):
     onboarding_complete: bool
     auth_provider: str
     notifications_enabled: bool
+    gyms: Optional[List[GymResponse]] = []
     class Config:
         orm_mode = True
 
@@ -82,6 +83,20 @@ class ProjectResponse(BaseModel):
     notes: List[str]
     moves: List[dict[str, Any]]  
     sessions: List[dict[str, Any]]
+
+    class Config:
+        orm_mode = True
+
+class GymBase(BaseModel):
+    name: str
+    is_default: Optional[bool] = False
+
+class GymCreate(GymBase):
+    pass
+
+class GymResponse(GymBase):
+    id: int
+    created_at: datetime
 
     class Config:
         orm_mode = True
