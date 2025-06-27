@@ -3,6 +3,29 @@ from datetime import datetime
 from typing import List, Optional, Any
 
 
+# ---------------------------
+# Gym schemas
+# ---------------------------
+
+class GymBase(BaseModel):
+    name: str
+    is_default: Optional[bool] = False
+
+class GymCreate(GymBase):
+    pass
+
+class GymResponse(GymBase):
+    id: int
+    created_at: datetime
+
+    class Config:
+        orm_mode = True
+
+
+# ---------------------------
+# User schemas
+# ---------------------------
+
 class UserCreate(BaseModel):
     first_name: str
     last_name: str
@@ -15,7 +38,6 @@ class UserCreate(BaseModel):
     profile_image_url: Optional[str] = None
     auth_provider: str = "email"
     notifications_enabled: bool = True
-
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -36,8 +58,14 @@ class UserResponse(BaseModel):
     auth_provider: str
     notifications_enabled: bool
     gyms: Optional[List[GymResponse]] = []
+
     class Config:
         orm_mode = True
+
+
+# ---------------------------
+# Auth schemas
+# ---------------------------
 
 class Token(BaseModel):
     access_token: str
@@ -50,6 +78,11 @@ class ChangePasswordSchema(BaseModel):
     current_password: str
     new_password: str
 
+
+# ---------------------------
+# Climb schemas
+# ---------------------------
+
 class ClimbBase(BaseModel):
     grade: str
     attempts: int
@@ -61,8 +94,8 @@ class ClimbResponse(ClimbBase):
     id: int
     created_at: datetime
 
-class Config:
-    orm_mode = True
+    class Config:
+        orm_mode = True
 
 class ClimbFilter(BaseModel):
     start_date: Optional[datetime] = None
@@ -72,6 +105,11 @@ class ClimbFilter(BaseModel):
 class AverageGradeRequest(BaseModel):
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
+
+
+# ---------------------------
+# Project schemas
+# ---------------------------
 
 class ProjectResponse(BaseModel):
     id: int
@@ -86,18 +124,3 @@ class ProjectResponse(BaseModel):
 
     class Config:
         orm_mode = True
-
-class GymBase(BaseModel):
-    name: str
-    is_default: Optional[bool] = False
-
-class GymCreate(GymBase):
-    pass
-
-class GymResponse(GymBase):
-    id: int
-    created_at: datetime
-
-    class Config:
-        orm_mode = True
-
