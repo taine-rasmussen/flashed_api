@@ -147,3 +147,13 @@ def get_user_projects(db: Session, user_id: int):
           .order_by(models.Project.created_at.desc())
           .all()
     )
+
+def create_gym(db: Session, gym: schemas.GymCreate, user_id: int):
+    db_gym = models.Gym(**gym.dict(), user_id=user_id)
+    db.add(db_gym)
+    db.commit()
+    db.refresh(db_gym)
+    return db_gym
+
+def get_user_gyms(db: Session, user_id: int):
+    return db.query(models.Gym).filter(models.Gym.user_id == user_id).all()
