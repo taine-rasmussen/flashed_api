@@ -13,6 +13,7 @@ from fastapi.security import OAuth2PasswordBearer
 from .utils import verify_password, hash_password
 from typing import List, Optional
 from sqlalchemy import func, case, cast, Integer
+from .auth import get_current_user
 
 
 app = FastAPI()
@@ -251,3 +252,18 @@ def read_projects(
     if projects is None:
         raise HTTPException(status_code=404, detail="No projects found")
     return projects
+
+@app.post("/add_gym/", response_model=schemas.GymResponse)
+def create_gym_for_user(
+    gym: schemas.GymCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    return crud.create_gym(db, gym, current_user.id)
+
+@app.get("/get_gyms/", response_model=List[schemas.GymResponse])
+def read_user_gyms(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    return crud.get_user_gyms(db, current_user.id)
