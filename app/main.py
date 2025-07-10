@@ -194,30 +194,33 @@ def add_climb(
     token: dict = Depends(verify_access_token)
 ):
     if token.get("id") != user_id:
-        raise HTTPException(status_code=403, detail="You are not authorized to add climbs for this user.")
+        raise HTTPException(status_code=403, detail="Not authorized.")
 
-    try:
-        internal_grade_value = convert_grade_to_internal(climb.grade, GradeStyle(climb.scale))
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    # Load the gym to get its grade_ranges
+    gym = db.query(models.Gym).filter(
+        models.Gym.id == climb.gym_id,
+        models.Gym.user_id == user_id
+    ).first()
+    if not gym:
+        raise HTTPException(status_code=404, detail="Gym not found")
 
-    db_climb = crud.create_climb(
-        db=db,
+    # Decide how to convert the grade
+    if climb.scale == "Gym" and gym.grade_ranges:
+        internal_grade = label_to_internal(climb.grade, gym.grade_ranges)
+    else:
+        internal_grade = convert_grade_to_internal(climb.grade, GradeStyle(climb.scale))
+
+    db_climb = models.Climb(
         user_id=user_id,
-        internal_grade=internal_grade_value,
+        internal_grade=internal_grade,
         original_grade=climb.grade,
         original_scale=climb.scale,
         attempts=climb.attempts
     )
-
-    return schemas.ClimbResponse(
-        id=db_climb.id,
-        grade=climb.grade,
-        original_grade=db_climb.original_grade,
-        original_scale=db_climb.original_scale,
-        attempts=db_climb.attempts,
-        created_at=db_climb.created_at
-    )
+    db.add(db_climb)
+    db.commit()
+    db.refresh(db_climb)
+    return db_climb
 
 @app.post("/get_climbs/", response_model=List[schemas.ClimbResponse])
 def get_climbs(

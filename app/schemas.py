@@ -89,6 +89,7 @@ class ClimbBase(BaseModel):
     attempts: int
 
 class ClimbCreate(BaseModel):
+    gym_id: int 
     grade: str
     scale: str
     attempts: int

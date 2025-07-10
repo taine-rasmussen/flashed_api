@@ -60,3 +60,16 @@ def convert_internal_to_display(internal: int, scale: GradeStyle) -> str:
             elif scale == GradeStyle.FONT:
                 return row["font"]
     raise ValueError(f"Cannot find mapping for internal value '{internal}'")
+
+
+def label_to_internal(label: str, ranges: list[dict]) -> int:
+    for band in ranges:
+        if band["label"] == label:
+            return (band["lo"] + band["hi"]) // 2
+    raise ValueError(f"Unknown custom label {label}")
+
+def internal_to_label(val: int, ranges: list[dict]) -> str:
+    for band in ranges:
+        if band["lo"] <= val <= band["hi"]:
+            return band["label"]
+    return f"Unknown ({val})"
