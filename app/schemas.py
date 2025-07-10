@@ -87,12 +87,16 @@ class ClimbBase(BaseModel):
     grade: str
     attempts: int
 
-class ClimbCreate(ClimbBase):
-    pass
+class ClimbCreate(BaseModel):
+    grade: str
+    scale: str
+    attempts: int
 
 class ClimbResponse(ClimbBase):
     id: int
     created_at: datetime
+    original_grade: str
+    original_scale: str
 
     class Config:
         orm_mode = True

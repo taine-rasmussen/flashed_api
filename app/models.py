@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, func, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, String, Text, DateTime, func, ForeignKey, Boolean, Float
 from sqlalchemy.orm import relationship
 from .database import Base
 from sqlalchemy.dialects.postgresql import JSONB, ARRAY
@@ -35,10 +35,13 @@ class Climb(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
-    grade = Column(String, index=True)
+    internal_grade = Column(Float, nullable=False, index=True)
+    original_grade = Column(String, nullable=False)
+    original_scale = Column(String(50), nullable=False)
     attempts = Column(Integer)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     user = relationship("User", back_populates="climbs")
+
 
 class Project(Base):
     __tablename__ = "projects"

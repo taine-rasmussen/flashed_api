@@ -10,6 +10,9 @@ router = APIRouter()
 @router.post("/seed/", status_code=status.HTTP_201_CREATED)
 def seed_data(db: Session = Depends(get_db)):
     try:
+        # -----------------------------
+        # Users
+        # -----------------------------
         users = [
             models.User(
                 first_name="Ella",
@@ -50,6 +53,9 @@ def seed_data(db: Session = Depends(get_db)):
         ella = db.query(models.User).filter_by(email="ella@flashed.app").first()
         tom = db.query(models.User).filter_by(email="tom@flashed.app").first()
 
+        # -----------------------------
+        # Climbs
+        # -----------------------------
         climbs = [
             models.Climb(user_id=ella.id, grade="V3", attempts=1),
             models.Climb(user_id=ella.id, grade="V4", attempts=2),
@@ -57,6 +63,23 @@ def seed_data(db: Session = Depends(get_db)):
         ]
         db.add_all(climbs)
 
+        # -----------------------------
+        # Gyms
+        # -----------------------------
+        gym_data = [
+            (ella, ["Beta Bloc", "VauxWall West", "The Arch North"]),
+            (tom, ["Stronghold", "BlocHaus", "The Castle"]),
+        ]
+
+        for user, gym_names in gym_data:
+            for gym_name in gym_names:
+                exists = db.query(models.Gym).filter_by(user_id=user.id, name=gym_name).first()
+                if not exists:
+                    db.add(models.Gym(name=gym_name, user_id=user.id))
+
+        # -----------------------------
+        # Project
+        # -----------------------------
         if not db.query(models.Project).filter_by(user_id=tom.id).first():
             db.add(models.Project(
                 user_id=tom.id,
@@ -75,7 +98,7 @@ def seed_data(db: Session = Depends(get_db)):
             ))
 
         db.commit()
-        return {"message": "London-based seed data created."}
+        return {"message": "Seed data created with users, climbs, gyms, and project."}
 
     except IntegrityError:
         db.rollback()
