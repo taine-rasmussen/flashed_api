@@ -14,6 +14,7 @@ from .utils import verify_password, hash_password
 from typing import List, Optional
 from sqlalchemy import func, case, cast, Integer
 from .auth import get_current_user
+from .conversion import convert_internal_to_display, GradeStyle
 
 
 app = FastAPI()
@@ -194,9 +195,29 @@ def add_climb(
 ):
     if token.get("id") != user_id:
         raise HTTPException(status_code=403, detail="You are not authorized to add climbs for this user.")
-    
-    db_climb = crud.create_climb(db=db, climb=climb, user_id=user_id)
-    return db_climb
+
+    try:
+        internal_grade_value = convert_grade_to_internal(climb.grade, GradeStyle(climb.scale))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    db_climb = crud.create_climb(
+        db=db,
+        user_id=user_id,
+        internal_grade=internal_grade_value,
+        original_grade=climb.grade,
+        original_scale=climb.scale,
+        attempts=climb.attempts
+    )
+
+    return schemas.ClimbResponse(
+        id=db_climb.id,
+        grade=climb.grade,
+        original_grade=db_climb.original_grade,
+        original_scale=db_climb.original_scale,
+        attempts=db_climb.attempts,
+        created_at=db_climb.created_at
+    )
 
 @app.post("/get_climbs/", response_model=List[schemas.ClimbResponse])
 def get_climbs(
@@ -206,9 +227,36 @@ def get_climbs(
     token: dict = Depends(verify_access_token)
 ):
     if token.get("id") != user_id:
-        raise HTTPException(status_code=403, detail="You are not authorized to view climbs for this user.")
+        raise HTTPException(status_code=403, detail="Not authorized to view climbs for this user.")
     
-    return crud.get_user_climbs(db, user_id, filters)
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Convert the grade_range into internal values using user's grade style
+    internal_grade_range = None
+    if filters.grade_range:
+        try:
+            internal_grade_range = [
+                convert_grade_to_internal(grade, GradeStyle(user.grade_style))
+                for grade in filters.grade_range
+            ]
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+    climbs = crud.get_user_climbs(db, user_id, filters, internal_grade_range)
+
+    return [
+        schemas.ClimbResponse(
+            id=climb.id,
+            grade=convert_internal_to_display(climb.internal_grade, GradeStyle(user.grade_style)),
+            original_grade=climb.original_grade,
+            original_scale=climb.original_scale,
+            attempts=climb.attempts,
+            created_at=climb.created_at
+        )
+        for climb in climbs
+    ]
 
 @app.post("/average_grade/")
 def average_grade(
