@@ -14,7 +14,7 @@ from .utils import verify_password, hash_password
 from typing import List, Optional
 from sqlalchemy import func, case, cast, Integer
 from .auth import get_current_user
-from .conversion import convert_internal_to_display, GradeStyle
+from .conversion import convert_internal_to_display, convert_grade_to_internal, GradeStyle
 
 
 app = FastAPI()
