@@ -62,10 +62,16 @@ class Project(Base):
 class Gym(Base):
     __tablename__ = "gyms"
 
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(100), nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    is_default = Column(Boolean, default=False)
+    id            = Column(Integer, primary_key=True, index=True)
+    name          = Column(String(100), nullable=False)
+    user_id       = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at    = Column(DateTime(timezone=True), server_default=func.now())
+    is_default    = Column(Boolean, default=False)
+    grade_ranges  = Column(
+        JSONB,
+        nullable=False,
+        default=list,
+        doc="List of {label, lo, hi} objects defining this gym’s custom bands"
+    )
 
     user = relationship("User", back_populates="gyms")

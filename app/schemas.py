@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr
 from datetime import datetime
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Dict
 
 
 # ---------------------------
@@ -10,6 +10,7 @@ from typing import List, Optional, Any
 class GymBase(BaseModel):
     name: str
     is_default: Optional[bool] = False
+    grade_ranges: Optional[List[Dict[str, int]]] = []   # ← NEW
 
 class GymCreate(GymBase):
     pass
