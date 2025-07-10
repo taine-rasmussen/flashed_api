@@ -4,11 +4,6 @@ class GradeStyle(str, Enum):
     VSCALE = "VScale"
     FONT = "Font"
 
-
-# -------------------------------------------------
-# Master conversion table
-# -------------------------------------------------
-
 CONVERSION_TABLE = [
     {"internal": 0,  "font": "4",   "v": "V0"},
     {"internal": 1,  "font": "4+",  "v": "V0"},
