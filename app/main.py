@@ -236,7 +236,7 @@ def get_climbs(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # Convert the grade_range into internal values using user's grade style
+    # If filtering by grade range, convert to internal ints
     internal_grade_range = None
     if filters.grade_range:
         try:
@@ -249,10 +249,21 @@ def get_climbs(
 
     climbs = crud.get_user_climbs(db, user_id, filters, internal_grade_range)
 
+    # If user's grade_style is "Gym", look up the default gym's ranges
+    gym = db.query(models.Gym).filter(
+        models.Gym.user_id == user_id,
+        models.Gym.is_default == True
+    ).first()
+
     return [
         schemas.ClimbResponse(
             id=climb.id,
-            grade=convert_internal_to_display(climb.internal_grade, GradeStyle(user.grade_style)),
+            # Decide how to display grade
+            grade=(
+                internal_to_label(climb.internal_grade, gym.grade_ranges)
+                if user.grade_style == "Gym" and gym and gym.grade_ranges
+                else convert_internal_to_display(climb.internal_grade, GradeStyle(user.grade_style))
+            ),
             original_grade=climb.original_grade,
             original_scale=climb.original_scale,
             attempts=climb.attempts,
@@ -260,6 +271,7 @@ def get_climbs(
         )
         for climb in climbs
     ]
+
 
 @app.post("/average_grade/")
 def average_grade(
