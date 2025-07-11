@@ -10,7 +10,7 @@ from jose import jwt
 from .schemas import UserResponse
 from jose.exceptions import JWTError
 from fastapi.security import OAuth2PasswordBearer
-from .utils import verify_password, hash_password
+from .utils import verify_password, hash_password, format_for_display
 from typing import List, Optional
 from sqlalchemy import func, case, cast, Integer
 from .auth import get_current_user
@@ -232,14 +232,14 @@ def get_climbs(
     token: dict = Depends(verify_access_token)
 ):
     if token.get("id") != user_id:
-        raise HTTPException(status_code=403, detail="Not authorized to view climbs for this user.")
+        raise HTTPException(403, "Not authorized to view climbs for this user.")
     
     # Load user
     user = db.query(models.User).get(user_id)
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(404, "User not found")
 
-    # Convert requested grade_range filter into internal ints (using user's preferred style)
+    # Convert requested grade_range filter into internal ints
     internal_grade_range = None
     if filters.grade_range:
         try:
@@ -248,33 +248,36 @@ def get_climbs(
                 for g in filters.grade_range
             ]
         except ValueError as e:
-            raise HTTPException(status_code=400, detail=str(e))
+            raise HTTPException(400, str(e))
 
     # Fetch climbs (filtered by date + internal_grade_range)
     climbs = crud.get_user_climbs(db, user_id, filters, internal_grade_range)
 
-    # Build response, branching on each climb’s original_scale and its specific gym
+    # Build response using the shared helper
+    user_pref = GradeStyle(user.grade_style)
     result = []
     for climb in climbs:
+        # load gym_ranges if this climb used a gym scale
+        gym_ranges = None
         if climb.original_scale == "Gym" and climb.gym_id:
             gym = db.query(models.Gym).get(climb.gym_id)
-            gym_ranges = gym.grade_ranges if gym and gym.grade_ranges else None
-            display = internal_to_label(climb.internal_grade, gym_ranges)
-        elif climb.original_scale == "VScale":
-            display = convert_internal_to_display(climb.internal_grade, GradeStyle.VSCALE)
-        elif climb.original_scale == "Font":
-            display = convert_internal_to_display(climb.internal_grade, GradeStyle.FONT)
-        else:
-            display = convert_internal_to_display(climb.internal_grade, GradeStyle(user.grade_style))
+            gym_ranges = gym.grade_ranges if gym else None
+
+        display = format_for_display(
+            internal_grade = climb.internal_grade,
+            original_scale = climb.original_scale,
+            gym_ranges     = gym_ranges or [],
+            user_pref      = user_pref,
+        )
 
         result.append(
             schemas.ClimbResponse(
-                id=climb.id,
-                grade=display,
-                original_grade=climb.original_grade,
-                original_scale=climb.original_scale,
-                attempts=climb.attempts,
-                created_at=climb.created_at
+                id              = climb.id,
+                grade           = display,
+                original_grade  = climb.original_grade,
+                original_scale  = climb.original_scale,
+                attempts        = climb.attempts,
+                created_at      = climb.created_at,
             )
         )
 
