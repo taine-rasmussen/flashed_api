@@ -10,10 +10,11 @@ from jose import jwt
 from .schemas import UserResponse
 from jose.exceptions import JWTError
 from fastapi.security import OAuth2PasswordBearer
-from .utils import verify_password, hash_password
+from .utils import verify_password, hash_password, format_for_display
 from typing import List, Optional
 from sqlalchemy import func, case, cast, Integer
 from .auth import get_current_user
+from .conversion import convert_internal_to_display, convert_grade_to_internal, GradeStyle, internal_to_label
 
 
 app = FastAPI()
@@ -193,10 +194,35 @@ def add_climb(
     token: dict = Depends(verify_access_token)
 ):
     if token.get("id") != user_id:
-        raise HTTPException(status_code=403, detail="You are not authorized to add climbs for this user.")
-    
-    db_climb = crud.create_climb(db=db, climb=climb, user_id=user_id)
+        raise HTTPException(status_code=403, detail="Not authorized.")
+
+    # Load the gym to get its grade_ranges
+    gym = db.query(models.Gym).filter(
+        models.Gym.id == climb.gym_id,
+        models.Gym.user_id == user_id
+    ).first()
+    if not gym:
+        raise HTTPException(status_code=404, detail="Gym not found")
+
+    # Decide how to convert the grade
+    if climb.scale == "Gym" and gym.grade_ranges:
+        internal_grade = label_to_internal(climb.grade, gym.grade_ranges)
+    else:
+        internal_grade = convert_grade_to_internal(climb.grade, GradeStyle(climb.scale))
+
+    db_climb = models.Climb(
+        user_id=user_id,
+        gym_id=climb.gym_id,
+        internal_grade=internal_grade,
+        original_grade=climb.grade,
+        original_scale=climb.scale,
+        attempts=climb.attempts
+    )
+    db.add(db_climb)
+    db.commit()
+    db.refresh(db_climb)
     return db_climb
+
 
 @app.post("/get_climbs/", response_model=List[schemas.ClimbResponse])
 def get_climbs(
@@ -206,9 +232,59 @@ def get_climbs(
     token: dict = Depends(verify_access_token)
 ):
     if token.get("id") != user_id:
-        raise HTTPException(status_code=403, detail="You are not authorized to view climbs for this user.")
+        raise HTTPException(403, "Not authorized to view climbs for this user.")
     
-    return crud.get_user_climbs(db, user_id, filters)
+    # Load user
+    user = db.query(models.User).get(user_id)
+    if not user:
+        raise HTTPException(404, "User not found")
+
+    # Convert requested grade_range filter into internal ints
+    internal_grade_range = None
+    if filters.grade_range:
+        try:
+            internal_grade_range = [
+                convert_grade_to_internal(g, GradeStyle(user.grade_style))
+                for g in filters.grade_range
+            ]
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+
+    # Fetch climbs (filtered by date + internal_grade_range)
+    climbs = crud.get_user_climbs(db, user_id, filters, internal_grade_range)
+
+    # Build response using the shared helper
+    user_pref = GradeStyle(user.grade_style)
+    result = []
+    for climb in climbs:
+        # load gym_ranges if this climb used a gym scale
+        gym_ranges = None
+        if climb.original_scale == "Gym" and climb.gym_id:
+            gym = db.query(models.Gym).get(climb.gym_id)
+            gym_ranges = gym.grade_ranges if gym else None
+
+        display = format_for_display(
+            internal_grade = climb.internal_grade,
+            original_scale = climb.original_scale,
+            gym_ranges     = gym_ranges or [],
+            user_pref      = user_pref,
+        )
+
+        result.append(
+            schemas.ClimbResponse(
+                id              = climb.id,
+                grade           = display,
+                original_grade  = climb.original_grade,
+                original_scale  = climb.original_scale,
+                attempts        = climb.attempts,
+                created_at      = climb.created_at,
+            )
+        )
+
+    return result
+
+
+
 
 @app.post("/average_grade/")
 def average_grade(

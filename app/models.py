@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, func, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, String, Text, DateTime, func, ForeignKey, Boolean, Float
 from sqlalchemy.orm import relationship
 from .database import Base
 from sqlalchemy.dialects.postgresql import JSONB, ARRAY
@@ -35,10 +35,15 @@ class Climb(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
-    grade = Column(String, index=True)
+    gym_id = Column(Integer, ForeignKey("gyms.id"), nullable=True)
+    internal_grade = Column(Float, nullable=False, index=True)
+    original_grade = Column(String, nullable=False)
+    original_scale = Column(String(50), nullable=False)
     attempts = Column(Integer)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     user = relationship("User", back_populates="climbs")
+    gym  = relationship("Gym", foreign_keys=[gym_id])
+
 
 class Project(Base):
     __tablename__ = "projects"
@@ -59,10 +64,16 @@ class Project(Base):
 class Gym(Base):
     __tablename__ = "gyms"
 
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(100), nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    is_default = Column(Boolean, default=False)
+    id            = Column(Integer, primary_key=True, index=True)
+    name          = Column(String(100), nullable=False)
+    user_id       = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at    = Column(DateTime(timezone=True), server_default=func.now())
+    is_default    = Column(Boolean, default=False)
+    grade_ranges  = Column(
+        JSONB,
+        nullable=False,
+        default=list,
+        doc="List of {label, lo, hi} objects defining this gym’s custom bands"
+    )
 
     user = relationship("User", back_populates="gyms")

@@ -7,7 +7,7 @@ from . import models, schemas
 from dotenv import load_dotenv
 import os
 from .utils import verify_password, hash_password
-
+from typing import List, Optional
 
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -113,30 +113,36 @@ def change_password(db: Session, user: models.User, curr_pwd: str, new_pwd: str)
     
     return {"message": "Password updated successfully"}
 
-def create_climb(db: Session, climb: schemas.ClimbCreate, user_id: int):
+def create_climb(
+    db: Session,
+    user_id: int,
+    internal_grade: int,
+    original_grade: str,
+    original_scale: str,
+    attempts: int
+):
     db_climb = models.Climb(
         user_id=user_id,
-        grade=climb.grade,
-        attempts=climb.attempts,
-        created_at=datetime.utcnow(),
+        internal_grade=internal_grade,
+        original_grade=original_grade,
+        original_scale=original_scale,
+        attempts=attempts,
+        created_at=datetime.utcnow()
     )
     db.add(db_climb)
     db.commit()
     db.refresh(db_climb)
     return db_climb
 
-def get_user_climbs(db: Session, user_id: int, filters: schemas.ClimbFilter):
+def get_user_climbs(db: Session, user_id: int, filters: schemas.ClimbFilter, internal_grade_range: Optional[List[int]]):
     query = db.query(models.Climb).filter(models.Climb.user_id == user_id)
-    
-    # Filter by date range if provided
+
     if filters.start_date:
         query = query.filter(models.Climb.created_at >= filters.start_date)
     if filters.end_date:
         query = query.filter(models.Climb.created_at <= filters.end_date)
-    
-    # Filter by grade range if provided
-    if filters.grade_range:
-        query = query.filter(models.Climb.grade.in_(filters.grade_range))
+    if internal_grade_range:
+        query = query.filter(models.Climb.internal_grade.in_(internal_grade_range))
 
     return query.order_by(models.Climb.created_at.desc()).all()
 

@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr
 from datetime import datetime
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Dict
 
 
 # ---------------------------
@@ -10,6 +10,7 @@ from typing import List, Optional, Any
 class GymBase(BaseModel):
     name: str
     is_default: Optional[bool] = False
+    grade_ranges: Optional[List[Dict[str, int]]] = []   # ← NEW
 
 class GymCreate(GymBase):
     pass
@@ -87,12 +88,18 @@ class ClimbBase(BaseModel):
     grade: str
     attempts: int
 
-class ClimbCreate(ClimbBase):
-    pass
+class ClimbCreate(BaseModel):
+    # optional if not using custom grade range
+    gym_id: Optional[int] = None 
+    grade: str
+    scale: str
+    attempts: int
 
 class ClimbResponse(ClimbBase):
     id: int
     created_at: datetime
+    original_grade: str
+    original_scale: str
 
     class Config:
         orm_mode = True
