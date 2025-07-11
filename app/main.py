@@ -212,6 +212,7 @@ def add_climb(
 
     db_climb = models.Climb(
         user_id=user_id,
+        gym_id=climb.gym_id,
         internal_grade=internal_grade,
         original_grade=climb.grade,
         original_scale=climb.scale,
@@ -221,6 +222,7 @@ def add_climb(
     db.commit()
     db.refresh(db_climb)
     return db_climb
+
 
 @app.post("/get_climbs/", response_model=List[schemas.ClimbResponse])
 def get_climbs(
@@ -248,31 +250,21 @@ def get_climbs(
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
 
-    #  Fetch climbs (filtered by date + internal_grade_range)
+    # Fetch climbs (filtered by date + internal_grade_range)
     climbs = crud.get_user_climbs(db, user_id, filters, internal_grade_range)
 
-    # Preload default gym’s ranges (for any “Gym”-logged climbs)
-    gym = (
-        db.query(models.Gym)
-          .filter(models.Gym.user_id == user_id, models.Gym.is_default == True)
-          .first()
-    )
-    gym_ranges = gym.grade_ranges if gym and gym.grade_ranges else None
-
-    # Build response, branching on each climb’s original_scale
+    # Build response, branching on each climb’s original_scale and its specific gym
     result = []
     for climb in climbs:
-        if climb.original_scale == "Gym" and gym_ranges:
-            # It was logged as a custom gym range
+        if climb.original_scale == "Gym" and climb.gym_id:
+            gym = db.query(models.Gym).get(climb.gym_id)
+            gym_ranges = gym.grade_ranges if gym and gym.grade_ranges else None
             display = internal_to_label(climb.internal_grade, gym_ranges)
         elif climb.original_scale == "VScale":
-            # A single-point V-scale entry
             display = convert_internal_to_display(climb.internal_grade, GradeStyle.VSCALE)
         elif climb.original_scale == "Font":
-            # A single-point Font-scale entry
             display = convert_internal_to_display(climb.internal_grade, GradeStyle.FONT)
         else:
-            # Fallback to user’s preference
             display = convert_internal_to_display(climb.internal_grade, GradeStyle(user.grade_style))
 
         result.append(
@@ -287,6 +279,7 @@ def get_climbs(
         )
 
     return result
+
 
 
 

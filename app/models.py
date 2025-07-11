@@ -35,12 +35,14 @@ class Climb(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
+    gym_id = Column(Integer, ForeignKey("gyms.id"), nullable=True)
     internal_grade = Column(Float, nullable=False, index=True)
     original_grade = Column(String, nullable=False)
     original_scale = Column(String(50), nullable=False)
     attempts = Column(Integer)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     user = relationship("User", back_populates="climbs")
+    gym  = relationship("Gym", foreign_keys=[gym_id])
 
 
 class Project(Base):

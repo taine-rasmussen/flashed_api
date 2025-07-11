@@ -89,7 +89,8 @@ class ClimbBase(BaseModel):
     attempts: int
 
 class ClimbCreate(BaseModel):
-    gym_id: int 
+    # optional if not using custom grade range
+    gym_id: Optional[int] = None 
     grade: str
     scale: str
     attempts: int
