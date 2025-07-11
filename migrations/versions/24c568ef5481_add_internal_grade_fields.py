@@ -29,7 +29,6 @@ def upgrade() -> None:
                nullable=False)
     op.create_index(op.f('ix_climbs_internal_grade'), 'climbs', ['internal_grade'], unique=False)
 
-    # This is bulletproof. Postgres skips drop if column not there
     op.execute("ALTER TABLE climbs DROP COLUMN IF EXISTS grade;")
 
 
