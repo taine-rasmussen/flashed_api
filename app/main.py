@@ -232,45 +232,62 @@ def get_climbs(
     if token.get("id") != user_id:
         raise HTTPException(status_code=403, detail="Not authorized to view climbs for this user.")
     
-    user = db.query(models.User).filter(models.User.id == user_id).first()
+    # Load user
+    user = db.query(models.User).get(user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # If filtering by grade range, convert to internal ints
+    # Convert requested grade_range filter into internal ints (using user's preferred style)
     internal_grade_range = None
     if filters.grade_range:
         try:
             internal_grade_range = [
-                convert_grade_to_internal(grade, GradeStyle(user.grade_style))
-                for grade in filters.grade_range
+                convert_grade_to_internal(g, GradeStyle(user.grade_style))
+                for g in filters.grade_range
             ]
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
 
+    #  Fetch climbs (filtered by date + internal_grade_range)
     climbs = crud.get_user_climbs(db, user_id, filters, internal_grade_range)
 
-    # If user's grade_style is "Gym", look up the default gym's ranges
-    gym = db.query(models.Gym).filter(
-        models.Gym.user_id == user_id,
-        models.Gym.is_default == True
-    ).first()
+    # Preload default gym’s ranges (for any “Gym”-logged climbs)
+    gym = (
+        db.query(models.Gym)
+          .filter(models.Gym.user_id == user_id, models.Gym.is_default == True)
+          .first()
+    )
+    gym_ranges = gym.grade_ranges if gym and gym.grade_ranges else None
 
-    return [
-        schemas.ClimbResponse(
-            id=climb.id,
-            # Decide how to display grade
-            grade=(
-                internal_to_label(climb.internal_grade, gym.grade_ranges)
-                if user.grade_style == "Gym" and gym and gym.grade_ranges
-                else convert_internal_to_display(climb.internal_grade, GradeStyle(user.grade_style))
-            ),
-            original_grade=climb.original_grade,
-            original_scale=climb.original_scale,
-            attempts=climb.attempts,
-            created_at=climb.created_at
+    # Build response, branching on each climb’s original_scale
+    result = []
+    for climb in climbs:
+        if climb.original_scale == "Gym" and gym_ranges:
+            # It was logged as a custom gym range
+            display = internal_to_label(climb.internal_grade, gym_ranges)
+        elif climb.original_scale == "VScale":
+            # A single-point V-scale entry
+            display = convert_internal_to_display(climb.internal_grade, GradeStyle.VSCALE)
+        elif climb.original_scale == "Font":
+            # A single-point Font-scale entry
+            display = convert_internal_to_display(climb.internal_grade, GradeStyle.FONT)
+        else:
+            # Fallback to user’s preference
+            display = convert_internal_to_display(climb.internal_grade, GradeStyle(user.grade_style))
+
+        result.append(
+            schemas.ClimbResponse(
+                id=climb.id,
+                grade=display,
+                original_grade=climb.original_grade,
+                original_scale=climb.original_scale,
+                attempts=climb.attempts,
+                created_at=climb.created_at
+            )
         )
-        for climb in climbs
-    ]
+
+    return result
+
 
 
 @app.post("/average_grade/")
